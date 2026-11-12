@@ -1,7 +1,7 @@
 import csv, json, sys
 import numpy as np
 
-BASE = "/tmp/inputs/inputs/WLASL100/MediaPipe_data/x-y"
+BASE = "./WLASL100/MediaPipe_data/x-y"
 OUT = "/tmp/slr"
 N_LANDM = 75  # RH21 LH21 P33, x/y interleaved
 

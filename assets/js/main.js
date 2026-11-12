@@ -39,7 +39,11 @@ async function ensureEngine() {
   if (engineReady) return;
   setNote('Loading landmarkers and the recognition model (about 20 MB, once)...');
   await pipeline.loadModels('.');
-  await recognizer.load('models/signet-100.onnx', 'models/labels.json');
+  setNote('Landmarkers ready. Downloading the recognition model (3.8 MB)...');
+  await recognizer.load('models/signet-100.onnx', 'models/labels.json', (got, total) => {
+    setNote(`Downloading the recognition model: ${Math.round(100 * got / total)}%`);
+  });
+  setNote('Recognition model loaded. Warming up...');
   engineReady = true;
   setNote('Engine ready. MediaPipe landmarkers + transformer running locally in WebAssembly. The video stream never leaves this device.');
 }

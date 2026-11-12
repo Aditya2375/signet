@@ -1,5 +1,6 @@
-// Signet — inference: ONNX session, resampling, smoothing, emission state machine.
+// Signet — inference: ONNX session, smoothing, emission state machine.
 import * as ort from '../../vendor/ort/ort.wasm.min.mjs';
+import { resampleFrames } from './resample.js';
 
 const T_FIXED = 48;
 const DIMS = 150;
@@ -20,33 +21,31 @@ export class Recognizer {
     this.tick = 0;
   }
 
-  async load(modelUrl, labelsUrl) {
+  async load(modelUrl, labelsUrl, onProgress) {
     this.labels = await (await fetch(labelsUrl)).json();
-    this.session = await ort.InferenceSession.create(modelUrl, {
+    // fetch the model ourselves so we can show real download progress
+    const res = await fetch(modelUrl);
+    const total = +res.headers.get('content-length') || 0;
+    const chunks = [];
+    let got = 0;
+    const reader = res.body.getReader();
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value);
+      got += value.length;
+      if (onProgress) onProgress(got, total || got);
+    }
+    const buf = new Uint8Array(got);
+    let off = 0;
+    for (const c of chunks) { buf.set(c, off); off += c.length; }
+    this.session = await ort.InferenceSession.create(buf.buffer, {
       executionProviders: ['wasm'],
     });
   }
 
-  // frames: array of Float32Array(150), raw coords, -2 = missing. Returns {probs, top} or null.
-  resample(frames) {
-    const n = frames.length;
-    if (n < 8) return null;
-    const out = new Float32Array(T_FIXED * DIMS);
-    for (let t = 0; t < T_FIXED; t++) {
-      const pos = (n - 1) * (t / (T_FIXED - 1));
-      const i0 = Math.floor(pos);
-      const i1 = Math.min(i0 + 1, n - 1);
-      const w = pos - i0;
-      const a = frames[i0], b = frames[i1];
-      for (let d = 0; d < DIMS; d++) {
-        out[t * DIMS + d] = (a[d] * (1 - w) + b[d] * w) - 0.5;
-      }
-    }
-    return out;
-  }
-
   async infer(frames) {
-    const input = this.resample(frames);
+    const input = resampleFrames(frames, T_FIXED, DIMS);
     if (!input) return null;
     const tensor = new ort.Tensor('float32', input, [1, T_FIXED, DIMS]);
     const result = await this.session.run({ landmarks: tensor });

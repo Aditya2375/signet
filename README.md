@@ -44,7 +44,7 @@ model file this site serves:
 
 | metric | value |
 |---|---|
-| test top-1 | 71.7% |
+| test top-1 | 71.7% (95% CI 65.9–76.9%, n=258) |
 | test top-5 | 88.4% |
 | validation top-1 | 73.7% |
 | validation top-5 | 91.1% |
@@ -53,22 +53,56 @@ model file this site serves:
 The same numbers ship in `models/meta.json`, which the site reads to fill its model card, so the
 page can never drift from the measured values.
 
-The numbers come from `training/train.py`, which prints and writes them after the final epoch.
-Live accuracy on your webcam will differ: lighting, framing, camera quality and signing speed all
+**What these numbers measure.** The evaluation feeds the model landmark sequences that were
+pre-extracted from the dataset videos with MediaPipe (see Data and licenses). It does not run the
+browser's own landmark detectors over raw video, so it is a dataset-landmark number, not a
+webcam-pipeline number; a webcam-pipeline evaluation requires re-extracting landmarks from the
+raw test videos with the exact browser models and is tracked as follow-up work. Live accuracy on
+your webcam will differ regardless: lighting, framing, camera quality and signing speed all
 matter, and dataset clips are kinder than a bedroom camera. Top-5 is always visible for a reason.
+
+**Method notes.** Single training seed (379). The reported checkpoint is the best-validation
+checkpoint over 220 epochs, so validation numbers are optimistically biased; test numbers come
+from the untouched test split, evaluated once for the final metrics and again for the parity and
+robustness analyses below. No model selection was done on the test set.
+
+**ONNX parity.** The served ONNX model was checked against the PyTorch checkpoint on all 258
+test clips: max absolute logit difference 0.00001, top-1 agreement 258/258. The site runs
+exactly the model these numbers describe.
+
+**Robustness, measured.** Same test set, inputs perturbed the way a webcam perturbs them:
+
+| perturbation | top-1 | top-5 |
+|---|---|---|
+| none | 71.7% | 88.4% |
+| mirrored camera (left/right swapped) | 73.3% | 88.4% |
+| left hand undetected for the whole clip | 1.6% | 6.6% |
+| pose track lost for the whole clip | 0.8% | 4.7% |
+| both hands undetected | 1.2% | 6.2% |
+
+The mirrored number says the model does not care which hand the detectors label Left or Right
+(flip augmentation did its job). The other three rows are the honest weak spot: the training data
+almost always contains full pose and both hands, so the model collapses when a track goes missing
+for a long stretch. Brief detection dropouts are bridged by interpolation, but a hand held out of
+frame for a whole sign is out of distribution. Training with landmark dropout to close this gap
+is in `training/train2.py`.
 
 ## What it is not
 
-- **Not sentence-level.** Isolated signs only; no grammar, no fingerspelling, no facial markers.
+- **Isolated-word recognition, not continuous signing.** One sign at a time, with a beat between
+  signs; no grammar, no fingerspelling, no facial markers, no sentence-level anything.
 - **ASL only.** Not Indian Sign Language, not BSL, not any other sign language.
 - **Not an accessibility tool.** It is a learning project. For real communication, use a human
   interpreter.
+- **Not broadly validated.** 100 words, one dataset, one seed. Accuracy across skin tones,
+  lighting conditions, camera angles and signing styles is untested; expect variance.
 
 ## Privacy
 
-Static site, no backend, no analytics, no cookies. The camera feed is processed frame by frame in
-the browser and immediately discarded. Nothing is recorded, stored or transmitted. Once the page
-and the models have loaded, you can pull the network cable and it keeps working.
+Static site, no backend, no analytics, no cookies, self-hosted fonts. The camera feed is
+processed frame by frame in the browser and immediately discarded. Nothing about you is recorded,
+stored or transmitted. The host (GitHub Pages) sees ordinary page requests, like any web server.
+Once the page and the models have loaded, you can pull the network cable and it keeps working.
 
 ## Data and licenses
 
@@ -100,4 +134,4 @@ required for this training path.
 ## Stack
 
 Plain HTML/CSS/JS with ES modules, no build step, no framework. MediaPipe Tasks Vision,
-ONNX Runtime Web. Everything vendored; the only external request is Google Fonts.
+ONNX Runtime Web. Everything vendored, fonts included; the page makes no third-party requests.

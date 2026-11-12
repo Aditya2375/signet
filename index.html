@@ -5,9 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Signet — Real-time ASL recognition in your browser</title>
 <meta name="description" content="Signet reads American Sign Language signs from your webcam and turns them into words, in real time, entirely on your device. 100 signs, no upload, no server.">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400&family=Space+Grotesk:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="vendor/fonts/fonts.css">
 <link rel="stylesheet" href="assets/css/main.css">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='15' fill='%230a0b0d'/%3E%3Ccircle cx='16' cy='16' r='14' fill='none' stroke='%23d4a24c' stroke-width='1.5'/%3E%3Cpath d='M16 8 L16 24 M10 14 L16 8 L22 14' stroke='%23ede8df' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
 </head>
@@ -22,7 +20,7 @@
     <a href="#studio">Studio</a>
     <a href="#words">100 words</a>
     <a href="#model">Model</a>
-    <a href="https://github.com/Aditya2375/signet" class="nav-gh">GitHub</a>
+    <a href="https://github.com/Aditya2375/signet" class="nav-gh" rel="noopener noreferrer">GitHub</a>
   </div>
 </nav>
 
@@ -40,7 +38,7 @@
     <div><dt>100</dt><dd>ASL signs</dd></div>
     <div><dt>150</dt><dd>landmark channels per frame</dd></div>
     <div><dt>&lt;1M</dt><dd>model parameters</dd></div>
-    <div><dt>0</dt><dd>bytes sent anywhere</dd></div>
+    <div><dt>0</dt><dd>bytes of video sent anywhere</dd></div>
   </dl>
 </header>
 
@@ -72,7 +70,7 @@
     <aside class="rail">
       <div class="rail-block">
         <p class="rail-label">Now reading</p>
-        <p class="rail-word" id="nowWord">&mdash;</p>
+        <p class="rail-word" id="nowWord" aria-live="polite">&mdash;</p>
         <div class="conf"><div class="conf-fill" id="confFill"></div></div>
         <p class="rail-conf" id="confText">confidence --</p>
       </div>
@@ -83,9 +81,10 @@
       <div class="rail-block rail-controls">
         <p class="rail-label">Controls</p>
         <label class="ctl"><span>Decision threshold</span>
-          <input type="range" id="ctlThresh" min="30" max="90" value="55">
+          <input type="range" id="ctlThresh" min="30" max="90" value="55" aria-describedby="ctlThreshHelp">
           <em id="ctlThreshVal">0.55</em>
         </label>
+        <p class="ctl-help" id="ctlThreshHelp">How sure the model must be before a word lands on the tape. Higher: fewer wrong words, more missed ones.</p>
         <label class="ctl ctl-check"><input type="checkbox" id="ctlMirror" checked><span>Mirror preview</span></label>
         <label class="ctl ctl-check"><input type="checkbox" id="ctlSkeleton" checked><span>Skeleton overlay</span></label>
         <div class="ctl-row">
@@ -96,7 +95,7 @@
       </div>
       <div class="rail-block">
         <p class="rail-label">Transcript tape</p>
-        <div class="tape" id="tape"><span class="tape-empty">Words you sign will land here.</span></div>
+        <div class="tape" id="tape" aria-live="polite"><span class="tape-empty">Words you sign will land here.</span></div>
       </div>
     </aside>
   </div>
@@ -162,8 +161,8 @@
 
   <div class="privacy">
     <h3>Privacy, in one paragraph</h3>
-    <p>There is no backend. The page is static files on GitHub Pages; the models download once and
-    run in WebAssembly on your device. The webcam stream is handed by the browser directly to the
+    <p>There is no backend. The page is static files on GitHub Pages (which, like any web host, logs
+    page requests); the models download once and run in WebAssembly on your device. The webcam stream is handed by the browser directly to the
     page and discarded frame by frame. No video, landmarks, predictions or usage data are recorded,
     stored or transmitted. Once the page and the models have loaded, you can pull the network cable and it keeps working.</p>
   </div>
@@ -172,7 +171,7 @@
 </main>
 
 <footer class="footer">
-  <p>Signet — built by <a href="https://github.com/Aditya2375">Aditya Kulkarni</a>.
+  <p>Signet — built by <a href="https://github.com/Aditya2375" rel="noopener noreferrer">Aditya Kulkarni</a>.
   Landmarks by MediaPipe, inference by ONNX Runtime Web, training data by the WLASL project (WACV 2020).
   Dictionary links go to SignASL.</p>
   <p class="footer-fine">This is a research demo, not a communication tool for the Deaf community — for real conversation, nothing beats a human interpreter.</p>
