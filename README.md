@@ -44,10 +44,10 @@ model file this site serves:
 
 | metric | value |
 |---|---|
-| test top-1 | 71.7% (95% CI 65.9–76.9%, n=258) |
-| test top-5 | 88.4% |
-| validation top-1 | 73.7% |
-| validation top-5 | 91.1% |
+| test top-1 | 65.9% (95% CI 59.8–71.5%, n=258) |
+| test top-5 | 86.0% |
+| validation top-1 | 70.7% |
+| validation top-5 | 88.8% |
 | parameters | 949,540 |
 
 The same numbers ship in `models/meta.json`, which the site reads to fill its model card, so the
@@ -64,28 +64,36 @@ matter, and dataset clips are kinder than a bedroom camera. Top-5 is always visi
 **Method notes.** Single training seed (379). The reported checkpoint is the best-validation
 checkpoint over 220 epochs, so validation numbers are optimistically biased; test numbers come
 from the untouched test split, evaluated once for the final metrics and again for the parity and
-robustness analyses below. No model selection was done on the test set.
+robustness analyses below. Checkpoint selection used validation only.
+
+**Why this checkpoint and not the 71.7% one.** The first trained model scored 71.7% top-1 on the
+clean test set, but perturbation testing showed it collapsed when a landmark track went missing
+for a whole clip (left hand undetected: 1.6% top-1; pose track lost: 0.8%) — exactly what a real
+webcam does every few seconds. The served model is that same architecture retrained with
+landmark-dropout augmentation (`training/train2.py`). It gives up 5.8 points of clean-set
+accuracy to survive the real world, which is the right trade for a live demo. Both models'
+numbers are below; the earlier model is not shipped.
 
 **ONNX parity.** The served ONNX model was checked against the PyTorch checkpoint on all 258
 test clips: max absolute logit difference 0.00001, top-1 agreement 258/258. The site runs
 exactly the model these numbers describe.
 
-**Robustness, measured.** Same test set, inputs perturbed the way a webcam perturbs them:
+**Robustness, measured.** Same test set, inputs perturbed the way a webcam perturbs them.
+v1 is the first model (71.7% clean); v2 is the served model, retrained with dropout.
 
-| perturbation | top-1 | top-5 |
-|---|---|---|
-| none | 71.7% | 88.4% |
-| mirrored camera (left/right swapped) | 73.3% | 88.4% |
-| left hand undetected for the whole clip | 1.6% | 6.6% |
-| pose track lost for the whole clip | 0.8% | 4.7% |
-| both hands undetected | 1.2% | 6.2% |
+| perturbation | v1 top-1 | v2 top-1 | v2 top-5 |
+|---|---|---|---|
+| none | 71.7% | 65.9% | 86.0% |
+| mirrored camera (left/right swapped) | 73.3% | — | — |
+| left hand undetected for the whole clip | 1.6% | 19.4% | 46.9% |
+| pose track lost for the whole clip | 0.8% | 51.6% | 79.1% |
+| both hands undetected | 1.2% | 6.6% | 18.2% |
 
 The mirrored number says the model does not care which hand the detectors label Left or Right
-(flip augmentation did its job). The other three rows are the honest weak spot: the training data
-almost always contains full pose and both hands, so the model collapses when a track goes missing
-for a long stretch. Brief detection dropouts are bridged by interpolation, but a hand held out of
-frame for a whole sign is out of distribution. Training with landmark dropout to close this gap
-is in `training/train2.py`.
+(flip augmentation did its job). Missing tracks remain the hard case: v2 survives a lost pose
+track and degrades instead of collapsing when a hand disappears, but a long stretch with no hands
+at all is still out of distribution — the no-hands pause in the live loop exists partly for this
+reason.
 
 ## What it is not
 
