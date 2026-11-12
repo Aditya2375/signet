@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Signet — Real-time ASL recognition in your browser</title>
+<meta name="description" content="Signet reads American Sign Language signs from your webcam and turns them into words, in real time, entirely on your device. 100 signs, no upload, no server.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400&family=Space+Grotesk:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/main.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='15' fill='%230a0b0d'/%3E%3Ccircle cx='16' cy='16' r='14' fill='none' stroke='%23d4a24c' stroke-width='1.5'/%3E%3Cpath d='M16 8 L16 24 M10 14 L16 8 L22 14' stroke='%23ede8df' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+</head>
+<body>
+
+<nav class="nav">
+  <a class="nav-mark" href="#top" aria-label="Signet home">
+    <svg viewBox="0 0 32 32" width="22" height="22" aria-hidden="true"><circle cx="16" cy="16" r="14" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M16 8 L16 24 M10 14 L16 8 L22 14" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <span>Signet</span>
+  </a>
+  <div class="nav-links">
+    <a href="#studio">Studio</a>
+    <a href="#words">100 words</a>
+    <a href="#model">Model</a>
+    <a href="https://github.com/Aditya2375/signet" class="nav-gh">GitHub</a>
+  </div>
+</nav>
+
+<header class="hero" id="top">
+  <p class="hero-kicker">American Sign Language · word-level · on-device</p>
+  <h1 class="hero-title">Your hands already<br>have the words.<br><em>Signet reads them.</em></h1>
+  <p class="hero-sub">A webcam, a neural network small enough to live in a browser tab, and
+  one hundred signs of American Sign Language, recognized as you make them.
+  Nothing leaves your machine — the camera feed never touches a server, because there is no server.</p>
+  <div class="hero-cta">
+    <a class="btn btn-solid" href="#studio">Open the studio</a>
+    <a class="btn btn-ghost" href="#model">How it works</a>
+  </div>
+  <dl class="hero-stats">
+    <div><dt>100</dt><dd>ASL signs</dd></div>
+    <div><dt>150</dt><dd>landmark channels per frame</dd></div>
+    <div><dt>&lt;1M</dt><dd>model parameters</dd></div>
+    <div><dt>0</dt><dd>bytes sent anywhere</dd></div>
+  </dl>
+</header>
+
+<main>
+
+<section class="studio" id="studio">
+  <div class="section-head">
+    <h2>The studio</h2>
+    <p>Allow the camera, warm up the models, then sign. Works best with your upper body in frame,
+    steady light, and one sign at a time.</p>
+  </div>
+
+  <div class="studio-grid">
+    <div class="stage">
+      <video id="cam" playsinline muted></video>
+      <canvas id="overlay"></canvas>
+      <div class="stage-idle" id="stageIdle">
+        <svg viewBox="0 0 48 48" width="40" height="40" aria-hidden="true"><path d="M8 18a4 4 0 0 1 4-4h14a4 4 0 0 1 4 4v2l10-6v20l-10-6v2a4 4 0 0 1-4 4H12a4 4 0 0 1-4-4z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+        <p>Camera is off.</p>
+        <button class="btn btn-solid" id="btnStart">Enable camera</button>
+        <button class="btn btn-ghost" id="btnSample">Replay a sample sign</button>
+      </div>
+      <div class="stage-hud" id="stageHud" hidden>
+        <span class="hud-pill" id="hudFps">-- fps</span>
+        <span class="hud-pill" id="hudState">idle</span>
+      </div>
+    </div>
+
+    <aside class="rail">
+      <div class="rail-block">
+        <p class="rail-label">Now reading</p>
+        <p class="rail-word" id="nowWord">&mdash;</p>
+        <div class="conf"><div class="conf-fill" id="confFill"></div></div>
+        <p class="rail-conf" id="confText">confidence --</p>
+      </div>
+      <div class="rail-block">
+        <p class="rail-label">Close contenders</p>
+        <ul class="topk" id="topK"></ul>
+      </div>
+      <div class="rail-block rail-controls">
+        <p class="rail-label">Controls</p>
+        <label class="ctl"><span>Decision threshold</span>
+          <input type="range" id="ctlThresh" min="30" max="90" value="55">
+          <em id="ctlThreshVal">0.55</em>
+        </label>
+        <label class="ctl ctl-check"><input type="checkbox" id="ctlMirror" checked><span>Mirror preview</span></label>
+        <label class="ctl ctl-check"><input type="checkbox" id="ctlSkeleton" checked><span>Skeleton overlay</span></label>
+        <div class="ctl-row">
+          <button class="btn btn-ghost btn-sm" id="btnPause" disabled>Pause</button>
+          <button class="btn btn-ghost btn-sm" id="btnClear" disabled>Clear tape</button>
+          <button class="btn btn-ghost btn-sm" id="btnStop" disabled>Stop camera</button>
+        </div>
+      </div>
+      <div class="rail-block">
+        <p class="rail-label">Transcript tape</p>
+        <div class="tape" id="tape"><span class="tape-empty">Words you sign will land here.</span></div>
+      </div>
+    </aside>
+  </div>
+  <p class="studio-note" id="engineNote">Engine: MediaPipe landmarkers + a transformer trained on WLASL-100,
+  running in WebAssembly on this device. The video stream is processed locally and is never recorded or sent anywhere.</p>
+</section>
+
+<section class="words" id="words">
+  <div class="section-head">
+    <h2>The hundred words</h2>
+    <p>The vocabulary is the WLASL-100 subset — the one hundred most-covered signs in the
+    World-Level ASL dataset. Each word links to a dictionary entry if you want to learn the sign
+    before testing the model on it.</p>
+  </div>
+  <div class="words-filter">
+    <input type="search" id="wordFilter" placeholder="Filter words..." aria-label="Filter words">
+    <span id="wordCount">100 words</span>
+  </div>
+  <ul class="words-grid" id="wordsGrid"></ul>
+</section>
+
+<section class="model" id="model">
+  <div class="section-head">
+    <h2>Under the hood</h2>
+    <p>Three parts, all running in this tab: a pair of landmark detectors that turn video into
+    numbers, a transformer that turns numbers into a word, and a small state machine that decides
+    when a sign actually happened.</p>
+  </div>
+
+  <div class="pipe">
+    <div class="pipe-step"><b>1 · See</b><p>MediaPipe hand and pose landmarkers read the webcam frame by frame and return 75 body points — both hands and the upper body — as plain coordinates.</p></div>
+    <div class="pipe-arrow" aria-hidden="true">→</div>
+    <div class="pipe-step"><b>2 · Remember</b><p>The last couple of seconds of points form a 48-step sequence, resampled so fast and slow signs line up the same way.</p></div>
+    <div class="pipe-arrow" aria-hidden="true">→</div>
+    <div class="pipe-step"><b>3 · Read</b><p>A 3-layer transformer encoder (~950k parameters, ONNX, WebAssembly) scores the sequence against all 100 signs. Smoothing and a threshold decide what lands on the tape.</p></div>
+  </div>
+
+  <div class="model-card">
+    <h3>Model card</h3>
+    <table class="mc-table">
+      <tr><th>Task</th><td>Isolated word-level American Sign Language recognition (100 classes)</td></tr>
+      <tr><th>Input</th><td>48 frames × 75 landmarks × (x, y), hands + upper-body pose, image-normalized coordinates</td></tr>
+      <tr><th>Architecture</th><td>Transformer encoder, 3 layers, width 192, 6 heads, attention pooling</td></tr>
+      <tr><th>Parameters</th><td id="mcParams">—</td></tr>
+      <tr><th>Training data</th><td>WLASL-100 (2,038 videos; 1,442 train / 338 val / 258 test after the official split)</td></tr>
+      <tr><th>Test top-1</th><td id="mcTest1">—</td></tr>
+      <tr><th>Test top-5</th><td id="mcTest5">—</td></tr>
+      <tr><th>Validation top-1</th><td id="mcVal1">—</td></tr>
+      <tr><th>Inference</th><td>ONNX Runtime Web (WebAssembly), on-device</td></tr>
+      <tr><th>License</th><td>Code MIT. Trained on WLASL, released under the Computational Use of Data Agreement (C-UDA-1.0): academic and computational use, no commercial use.</td></tr>
+    </table>
+  </div>
+
+  <div class="limits">
+    <h3>What it is not</h3>
+    <ul>
+      <li><b>Not sentence-level.</b> It reads one isolated sign at a time. Real ASL grammar — facial markers, spatial referencing, fingerspelling — is out of scope.</li>
+      <li><b>American Sign Language only.</b> Other sign languages (ISL, BSL, LSF…) use different vocabularies and grammars; this model knows none of them.</li>
+      <li><b>Not a medical or accessibility-critical tool.</b> It is a learning project. Accuracy is measured honestly above and it is not perfect; top-5 is there so you can see what it almost said.</li>
+      <li><b>Camera-dependent.</b> Bad light, cluttered backgrounds and cropped hands cost accuracy, exactly as they cost you accuracy when reading signs on a bad video call.</li>
+    </ul>
+  </div>
+
+  <div class="privacy">
+    <h3>Privacy, in one paragraph</h3>
+    <p>There is no backend. The page is static files on GitHub Pages; the models download once and
+    run in WebAssembly on your device. The webcam stream is handed by the browser directly to the
+    page and discarded frame by frame. No video, landmarks, predictions or usage data are recorded,
+    stored or transmitted. You can pull the network cable after the page loads and it keeps working.</p>
+  </div>
+</section>
+
+</main>
+
+<footer class="footer">
+  <p>Signet — built by <a href="https://github.com/Aditya2375">Aditya Kulkarni</a>.
+  Landmarks by MediaPipe, inference by ONNX Runtime Web, training data by the WLASL project (WACV 2020).
+  Dictionary links go to SignASL.</p>
+  <p class="footer-fine">This is a research demo, not a communication tool for the Deaf community — for real conversation, nothing beats a human interpreter.</p>
+</footer>
+
+<script type="module" src="assets/js/main.js"></script>
+</body>
+</html>
