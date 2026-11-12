@@ -14,12 +14,18 @@ const recognizer = new Recognizer();
 
 let engineReady = false;
 let lastInferAt = 0;
+let handsGone = 0;
 
 /* ---------------- boot ---------------- */
 async function boot() {
   setNote('Loading labels...');
-  const labels = await (await fetch('models/labels.json')).json();
-  buildWordGrid(labels);
+  try {
+    const labels = await (await fetch('models/labels.json')).json();
+    buildWordGrid(labels);
+  } catch (e) {
+    setNote('Could not load the word list. Serve the page over http(s), not file://.');
+    return;
+  }
   try {
     const meta = await (await fetch('models/meta.json')).json();
     fillModelCard(meta);
@@ -40,9 +46,19 @@ async function ensureEngine() {
 
 /* ---------------- live loop ---------------- */
 pipeline.onFrame = async (buffer, lm, fps) => {
+  const hasHands = !!(lm && (lm.rh || lm.lh));
   $('hudFps').textContent = fps ? `${fps} fps` : '-- fps';
-  $('hudState').textContent = lm && (lm.rh || lm.lh) ? 'hands in frame' : 'no hands';
-  $('hudState').classList.toggle('live', !!(lm && (lm.rh || lm.lh)));
+  $('hudState').textContent = hasHands ? 'hands in frame' : 'no hands';
+  $('hudState').classList.toggle('live', hasHands);
+  // Without hands the buffer is just noise; after ~0.5 s of no hands, stop reading
+  // and drop the smoothing state so an old sign cannot echo onto the tape.
+  handsGone = hasHands ? 0 : handsGone + 1;
+  if (handsGone === 15) {
+    recognizer.reset();
+    pipeline.clearBuffer();
+    renderIdle();
+  }
+  if (handsGone >= 15) return;
   const now = performance.now();
   if (now - lastInferAt < 160) return;   // ~6 inference ticks/s
   lastInferAt = now;
@@ -50,6 +66,13 @@ pipeline.onFrame = async (buffer, lm, fps) => {
   const out = await recognizer.infer(buffer);
   if (out) renderPrediction(out);
 };
+
+function renderIdle() {
+  $('nowWord').textContent = '\u2014';
+  $('confText').textContent = 'confidence --';
+  $('confFill').style.width = '0%';
+  $('topK').innerHTML = '';
+}
 
 function renderPrediction({ top, emitted }) {
   const best = top[0];
@@ -65,7 +88,11 @@ function renderPrediction({ top, emitted }) {
   ul.innerHTML = '';
   for (const t of top.slice(1)) {
     const li = document.createElement('li');
-    li.innerHTML = `<b>${t.word.toLowerCase()}</b><span>${t.prob.toFixed(2)}</span>`;
+    const b = document.createElement('b');
+    b.textContent = t.word.toLowerCase();
+    const s = document.createElement('span');
+    s.textContent = t.prob.toFixed(2);
+    li.append(b, s);
     ul.appendChild(li);
   }
   if (emitted) addToTape(emitted.word);
@@ -108,10 +135,13 @@ $('btnSample').addEventListener('click', async () => {
     await ensureEngine();
     const samples = await (await fetch('models/samples.json')).json();
     const s = samples[Math.floor(Math.random() * samples.length)];
+    pipeline.stopCamera();   // a live feed and a replay must never mix in one buffer
+    pipeline.stopSample();
     stageIdle.style.display = 'none';
     stageHud.hidden = false;
     pipeline.clearBuffer();
     recognizer.reset();
+    handsGone = 0;
     setNote(`Replaying a recorded sign — the answer is "${s.label}". Landmark data only; no video.`);
     await pipeline.playSample(s);
   } catch (e) {
@@ -135,9 +165,15 @@ $('btnClear').addEventListener('click', () => {
 
 $('btnStop').addEventListener('click', () => {
   pipeline.stopCamera();
+  pipeline.stopSample();
   stageIdle.style.display = 'flex';
   $('btnStart').disabled = false;
   $('btnStart').textContent = 'Enable camera';
+  $('btnPause').disabled = true;
+  $('btnPause').textContent = 'Pause';
+  pipeline.paused = false;
+  $('btnClear').disabled = true;
+  $('btnStop').disabled = true;
   stageHud.hidden = true;
 });
 
@@ -170,7 +206,10 @@ function buildWordGrid(labels) {
     a.href = `https://www.signasl.org/sign/${encodeURIComponent(w.toLowerCase())}`;
     a.target = '_blank';
     a.rel = 'noopener';
-    a.innerHTML = `${w.toLowerCase()} <span>${String(i + 1).padStart(2, '0')}</span>`;
+    a.append(document.createTextNode(w.toLowerCase() + ' '));
+    const num = document.createElement('span');
+    num.textContent = String(i + 1).padStart(2, '0');
+    a.appendChild(num);
     li.appendChild(a);
     grid.appendChild(li);
   });

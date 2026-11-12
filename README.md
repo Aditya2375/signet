@@ -28,7 +28,7 @@ webcam ──► MediaPipe hand + pose landmarkers ──► 75 points × (x, y)
 ```
 
 - **Landmarks.** MediaPipe's hand landmarker (2 hands × 21 points) and pose landmarker
-  (33 upper-body points) turn each video frame into 150 coordinates. Missing detections are
+  (33 body points) turn each video frame into 150 coordinates. Missing detections are
   encoded explicitly (-2) so the model can learn to distrust incomplete frames.
 - **Model.** A small transformer encoder with a learned positional encoding and attention pooling
   over time. Trained on the official WLASL-100 split (1,442 / 338 / 258 clips) with temporal
@@ -39,7 +39,7 @@ webcam ──► MediaPipe hand + pose landmarkers ──► 75 points × (x, y)
 
 ## Honest numbers
 
-Measured on the official WLASL-100 test split (258 clips, unseen signers included), the exact
+Measured on the official WLASL-100 test split (258 held-out clips) with the exact
 model file this site serves:
 
 | metric | value |
@@ -67,8 +67,8 @@ matter, and dataset clips are kinder than a bedroom camera. Top-5 is always visi
 ## Privacy
 
 Static site, no backend, no analytics, no cookies. The camera feed is processed frame by frame in
-the browser and immediately discarded. Nothing is recorded, stored or transmitted. Load the page,
-pull the network cable, it keeps working.
+the browser and immediately discarded. Nothing is recorded, stored or transmitted. Once the page
+and the models have loaded, you can pull the network cable and it keeps working.
 
 ## Data and licenses
 
@@ -86,15 +86,14 @@ pull the network cable, it keeps working.
 Any static file server works; the model fetches need `http(s)`, not `file://`:
 
 ```bash
-cd site   # this folder
-python3 -m http.server 8080
+python3 -m http.server 8080   # from the repository root
 # open http://localhost:8080
 ```
 
 ## Training your own
 
 `training/` has the full pipeline: parse the landmark CSVs (`prep.py`), train (`train.py`),
-export ONNX and evaluate. CPU-only is fine; a full run takes well under an hour on one core.
+export ONNX and evaluate. CPU-only is fine; a full 220-epoch run takes about half an hour on a modern multi-core CPU.
 You need the WLASL landmark inputs (see the data section above) — raw WLASL videos are not
 required for this training path.
 

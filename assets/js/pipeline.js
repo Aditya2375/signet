@@ -65,6 +65,7 @@ export class Pipeline {
 
   // Replay a recorded landmark sample through the same buffer path.
   async playSample(sample) {
+    if (this._sampleMode) return;   // one replay at a time
     this._sampleMode = sample;
     this.running = true;
     let i = 0;

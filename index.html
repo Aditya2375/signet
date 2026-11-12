@@ -138,7 +138,7 @@
     <h3>Model card</h3>
     <table class="mc-table">
       <tr><th>Task</th><td>Isolated word-level American Sign Language recognition (100 classes)</td></tr>
-      <tr><th>Input</th><td>48 frames × 75 landmarks × (x, y), hands + upper-body pose, image-normalized coordinates</td></tr>
+      <tr><th>Input</th><td>48 frames × 75 landmarks × (x, y), hands + body pose, image-normalized coordinates</td></tr>
       <tr><th>Architecture</th><td>Transformer encoder, 3 layers, width 192, 6 heads, attention pooling</td></tr>
       <tr><th>Parameters</th><td id="mcParams">—</td></tr>
       <tr><th>Training data</th><td>WLASL-100 (2,038 videos; 1,442 train / 338 val / 258 test after the official split)</td></tr>
@@ -165,7 +165,7 @@
     <p>There is no backend. The page is static files on GitHub Pages; the models download once and
     run in WebAssembly on your device. The webcam stream is handed by the browser directly to the
     page and discarded frame by frame. No video, landmarks, predictions or usage data are recorded,
-    stored or transmitted. You can pull the network cable after the page loads and it keeps working.</p>
+    stored or transmitted. Once the page and the models have loaded, you can pull the network cable and it keeps working.</p>
   </div>
 </section>
 
