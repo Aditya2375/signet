@@ -44,9 +44,14 @@ model file this site serves:
 
 | metric | value |
 |---|---|
-| test top-1 | see `models/meta.json` (generated at train time; the site shows the same numbers) |
-| test top-5 | see `models/meta.json` |
-| validation top-1 | see `models/meta.json` |
+| test top-1 | 71.7% |
+| test top-5 | 88.4% |
+| validation top-1 | 73.7% |
+| validation top-5 | 91.1% |
+| parameters | 949,540 |
+
+The same numbers ship in `models/meta.json`, which the site reads to fill its model card, so the
+page can never drift from the measured values.
 
 The numbers come from `training/train.py`, which prints and writes them after the final epoch.
 Live accuracy on your webcam will differ: lighting, framing, camera quality and signing speed all
