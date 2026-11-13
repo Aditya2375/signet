@@ -1,4 +1,4 @@
-// Signet — entry point: UI wiring, word explorer, model card.
+// Signet - entry point: UI wiring, word explorer, model card.
 import { Pipeline } from './pipeline.js';
 import { Recognizer } from './infer.js';
 
@@ -146,7 +146,7 @@ $('btnSample').addEventListener('click', async () => {
     pipeline.clearBuffer();
     recognizer.reset();
     handsGone = 0;
-    setNote(`Replaying a recorded sign — the answer is "${s.label}". Landmark data only; no video.`);
+    setNote(`Replaying a recorded sign - the answer is "${s.label}". Landmark data only; no video.`);
     await pipeline.playSample(s);
   } catch (e) {
     console.error(e);

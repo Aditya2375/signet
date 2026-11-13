@@ -1,4 +1,4 @@
-// Signet — inference: ONNX session, smoothing, emission state machine.
+// Signet - inference: ONNX session, smoothing, emission state machine.
 import * as ort from '../../vendor/ort/ort.wasm.min.mjs';
 import { resampleFrames } from './resample.js';
 

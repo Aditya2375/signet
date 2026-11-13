@@ -1,4 +1,4 @@
-// Signet — pipeline: camera, MediaPipe landmarkers, ring buffer, skeleton overlay.
+// Signet - pipeline: camera, MediaPipe landmarkers, ring buffer, skeleton overlay.
 import { FilesetResolver, HandLandmarker, PoseLandmarker } from '../../vendor/vision/vision_bundle.mjs';
 
 const DIMS = 150;

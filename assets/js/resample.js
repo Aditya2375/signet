@@ -1,4 +1,4 @@
-// Signet — temporal resampling, shared by inference and tests. No dependencies.
+// Signet - temporal resampling, shared by inference and tests. No dependencies.
 export function resampleFrames(frames, T = 48, DIMS = 150) {
   const n = frames.length;
   if (n < 8) return null;
