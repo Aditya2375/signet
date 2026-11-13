@@ -2,7 +2,8 @@
 
 Mirrored = x -> 1 - x with left/right hand blocks and left/right pose points swapped, which is
 what a flipped camera does. Reuses the helpers from eval_robust.py. Needs test.npz (from prep.py)
-and the served model at models/signet-100.onnx. Prints plain top-1 / top-5 for both.
+and the served model at models/signet-100.onnx. Writes training/mirror.json with top-1/top-5 for both, plus how many clips change
+predicted label and how many are right in only one version.
 """
 import json, math, sys
 import numpy as np
@@ -33,16 +34,14 @@ def flip(seq):
     return out
 
 sess = ort.InferenceSession(onnx, providers=['CPUExecutionProvider'])
-def metrics(transform=None):
-    t1 = t5 = 0
-    for seq, y in zip(seqs, labels):
+def predict(transform=None):
+    preds = []
+    for seq in seqs:
         s = resample(seq)
         if transform: s = transform(s)
         f = (s - 0.5).reshape(1, T_FIXED, 150).astype(np.float32)
-        order = np.argsort(-sess.run(['logits'], {'landmarks': f})[0][0])
-        t1 += order[0] == y; t5 += y in order[:5]
-    n = len(labels)
-    return t1 / n, t5 / n
+        preds.append(np.argsort(-sess.run(['logits'], {'landmarks': f})[0][0])[:5])
+    return np.array(preds)
 
 def wilson(p, n, zs=1.96):
     d = 1 + zs**2 / n; c = p + zs**2 / (2 * n)
@@ -50,9 +49,19 @@ def wilson(p, n, zs=1.96):
     return (c - h) / d, (c + h) / d
 
 n = len(labels)
-b1, b5 = metrics(); m1, m5 = metrics(transform=flip)
-print(f'n={n}')
-print(f'ORIGINAL top1={b1:.4f} top5={b5:.4f} wilson95={wilson(b1, n)}')
-print(f'MIRRORED top1={m1:.4f} top5={m5:.4f} wilson95={wilson(m1, n)}')
-json.dump({'n': n, 'original': [b1, b5], 'mirrored': [m1, m5], 'mirrored_wilson95': wilson(m1, n)},
-          open('mirror.json', 'w'), indent=1)
+po, pm = predict(), predict(transform=flip)
+ok_o, ok_m = po[:, 0] == labels, pm[:, 0] == labels
+res = {
+    'n': n,
+    'original_top1': float(ok_o.mean()), 'original_top5': float(np.mean([y in r for y, r in zip(labels, po)])),
+    'mirrored_top1': float(ok_m.mean()), 'mirrored_top5': float(np.mean([y in r for y, r in zip(labels, pm)])),
+    'mirrored_wilson95': list(map(float, wilson(float(ok_m.mean()), n))),
+    'predicted_label_changed': int((po[:, 0] != pm[:, 0]).sum()),
+    'right_only_unmirrored': int((ok_o & ~ok_m).sum()),
+    'right_only_mirrored': int((~ok_o & ok_m).sum()),
+    'right_in_both': int((ok_o & ok_m).sum()),
+    'wrong_in_both': int((~ok_o & ~ok_m).sum()),
+}
+print(json.dumps(res, indent=1))
+out = sys.argv[3] if len(sys.argv) > 3 else 'training/mirror.json'
+json.dump(res, open(out, 'w'), indent=1)

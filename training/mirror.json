@@ -1,0 +1,16 @@
+{
+ "n": 258,
+ "original_top1": 0.6589147286821705,
+ "original_top5": 0.8604651162790697,
+ "mirrored_top1": 0.6589147286821705,
+ "mirrored_top5": 0.8604651162790697,
+ "mirrored_wilson95": [
+  0.5991133051884006,
+  0.7140531282583857
+ ],
+ "predicted_label_changed": 50,
+ "right_only_unmirrored": 15,
+ "right_only_mirrored": 15,
+ "right_in_both": 155,
+ "wrong_in_both": 73
+}

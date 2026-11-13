@@ -89,10 +89,9 @@ test-set numbers, not webcam numbers.
 | pose track lost for the whole clip | 0.8% | 51.6% | 79.1% |
 | both hands undetected | 1.2% | 6.6% | 18.2% |
 
-The mirrored run for v2 comes from `training/eval_mirror.py` on the served model. Its overall
-accuracy is the same as unmirrored, but 30 individual clips change outcome (15 each way), so
-the model does see a difference between a clip and its mirror image. Treat it as roughly
-hand-agnostic on average, not exactly.
+The mirrored run for v2 comes from `training/eval_mirror.py` on the served model (output in `training/mirror.json`). Mirrored top-1 is 65.9% and top-5 is 86.0%, the same as unmirrored. Underneath that, the predicted label changes on 50 of 258 clips, 15 clips are right only unmirrored and 15 are right only mirrored, so the net is zero. On average it behaves as hand-agnostic, but not clip by clip.
+
+`eval_mirror.py` and `eval_robust.py` need the extracted landmark sequences (`test.npz`, built by `prep.py` from the published WLASL landmark CSVs). Those are not in this repo, so `mirror.json` and `robust.json` can't be regenerated from the repo alone. The numbers in them are as produced on my machine.
 
 The weak spot is missing hands. With one hand lost, v2 gets 19.4% right. With both gone it gets
 6.6%. v2 handles a lost pose track much better than v1 but it still struggles when hands
