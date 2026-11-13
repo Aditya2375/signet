@@ -84,7 +84,7 @@ function renderPrediction({ top, emitted }) {
     $('nowWord').textContent = best.word.toLowerCase();
     $('confText').textContent = `confidence ${best.prob.toFixed(2)}`;
   } else {
-    $('nowWord').textContent = '—';
+    $('nowWord').textContent = '...';
     $('confText').textContent = 'confidence --';
   }
   $('confFill').style.width = `${Math.round(best.prob * 100)}%`;
