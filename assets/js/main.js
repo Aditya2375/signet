@@ -18,6 +18,17 @@ let handsGone = 0;
 
 /* ---------------- boot ---------------- */
 async function boot() {
+  /* soft reveal on scroll; without JS every section is simply visible */
+  document.documentElement.classList.add('js');
+  if ('IntersectionObserver' in window) {
+    const io = new IntersectionObserver(entries => {
+      for (const en of entries) {
+        if (en.isIntersecting) { en.target.classList.add('in'); io.unobserve(en.target); }
+      }
+    }, { rootMargin: '0px 0px -8% 0px', threshold: 0.05 });
+    const sel = '.section-head, .studio-grid, .studio-note, .words-filter, .words-grid, .pipe, .model-card, .limits, .privacy, .footer';
+    document.querySelectorAll(sel).forEach(el => { el.classList.add('reveal'); io.observe(el); });
+  }
   setNote('Loading labels...');
   try {
     const labels = await (await fetch('models/labels.json')).json();
